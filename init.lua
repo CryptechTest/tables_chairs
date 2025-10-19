@@ -240,15 +240,35 @@ local ignore_groups = {
 }
 
 local extra_nodes = {}
+if core.get_modpath("ctg_world") then
+	extra_nodes["default:goldblock"] = false
+	extra_nodes["default:copperblock"] = false
+end
+if core.get_modpath("technic") then
+	extra_nodes["technic:stainless_steel_block"] = false
+end
 if core.get_modpath("scifi_nodes") then
-	extra_nodes = {
-		["scifi_nodes:white"] = true,
-		["scifi_nodes:white2"] = true,
-		["scifi_nodes:whitetile"] = true,
-		["scifi_nodes:blacktile"] = true,
-		["scifi_nodes:bluetile"] = true,
-		["ctg_world:aluminum_block"] = true
-	}
+	extra_nodes["scifi_nodes:white"] = false
+	extra_nodes["scifi_nodes:white2"] = false
+	extra_nodes["scifi_nodes:whitetile"] = false
+	extra_nodes["scifi_nodes:blacktile"] = false
+	extra_nodes["scifi_nodes:bluetile"] = false
+end
+if core.get_modpath("ctg_world") then
+	extra_nodes["ctg_world:aluminum_block"] = false
+	extra_nodes["ctg_world:nickel_block"] = false
+	extra_nodes["ctg_world:titanium_block"] = false
+end
+if core.get_modpath("basic_materials") then
+	extra_nodes["basic_materials:brass_block"] = false
+end
+if core.get_modpath("moreblocks") then
+	extra_nodes["moreblocks:copperpatina"] = false
+end
+if core.get_modpath("x_farming") then
+	extra_nodes["x_farming:kiwi_wood"] = true
+	extra_nodes["x_farming:jungle_wood"] = true
+	extra_nodes["x_farming:pine_nut_wood"] = true
 end
 
 function tables_chairs.register_legacy_alias(recipe)
@@ -392,9 +412,8 @@ else
 				if not k:find("corner") and not k:find("slab") and not k:find("roof") then
 					table.insert(regs, k)
 				end
-			end
-			if extra_nodes[k] then
-				tables_chairs.register_furniture2(k, nil, false)
+			elseif extra_nodes[k] ~= nil then
+				tables_chairs.register_furniture2(k, nil, extra_nodes[k])
 			end
 		end
 		for _,k in pairs(regs) do
