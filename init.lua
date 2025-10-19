@@ -38,9 +38,16 @@ if mod_player_api or mod_mcl_player then
 	-- Thomas S. modified it, so that it can be used in this mod
 	if tables_chairs.enable_sitting then
 		tables_chairs.sit = function(pos, node, player)
-			if core.get_node(vector.add(pos,vector_y_plus_1)).name ~= "air" then
-				core.chat_send_player(player:get_player_name(), S("You tried to sit but hit your head."))
-				return
+			if core.get_modpath("ctg_airs") then
+				if not ctg_airs.is_atmos_node(vector.add(pos,vector_y_plus_1)) then
+					core.chat_send_player(player:get_player_name(), S("You tried to sit but hit your head."))
+					return
+				end
+			else
+				if core.get_node(vector.add(pos,vector_y_plus_1)).name ~= "air" then
+					core.chat_send_player(player:get_player_name(), S("You tried to sit but hit your head."))
+					return
+				end
 			end
 			local name = player:get_player_name()
 			if not player_api.player_attached[name] then
@@ -232,6 +239,18 @@ local ignore_groups = {
 	["tree"] = true
 }
 
+local extra_nodes = {}
+if core.get_modpath("scifi_nodes") then
+	extra_nodes = {
+		["scifi_nodes:white"] = true,
+		["scifi_nodes:white2"] = true,
+		["scifi_nodes:whitetile"] = true,
+		["scifi_nodes:blacktile"] = true,
+		["scifi_nodes:bluetile"] = true,
+		["ctg_world:aluminum_block"] = true
+	}
+end
+
 function tables_chairs.register_legacy_alias(recipe)
 	for furniture, def in pairs(furnitures) do
 		local node_name = "tables_chairs:" .. recipe:sub(recipe:find(":")+1) .. "_" .. furniture
@@ -240,7 +259,7 @@ function tables_chairs.register_legacy_alias(recipe)
 	end
 end
 
-function tables_chairs.register_furniture(recipe, tiles)
+function tables_chairs.register_furniture2(recipe, tiles, is_wood)
 	if not tiles then
 		tiles = T(recipe)
 	end
@@ -269,6 +288,10 @@ function tables_chairs.register_furniture(recipe, tiles)
 		if def.bench then
 			groups2.tables_chairs_bench = 1
 		end
+
+		if is_wood then
+			groups2['wood'] = 1
+		end
 		
 		core.register_node(":" .. node_name, {
 			description = S(def.description) .. S(" of ") .. core.registered_nodes[recipe].description,
@@ -291,6 +314,11 @@ function tables_chairs.register_furniture(recipe, tiles)
 			recipe = def.craft(recipe)
 		})
 	end
+end
+
+
+function tables_chairs.register_furniture(recipe, tiles)
+	tables_chairs.register_furniture2(recipe, tiles, true)
 end
 
 if (core.get_modpath("default")) then
@@ -350,11 +378,20 @@ if game == "exile" then
 		register_furniture_exile("nodes_nature:maraka_log",{"group:log"},3)
 	end)
 else
+	local regs = {}
 	table.insert(core.registered_on_mods_loaded, 1, function()
 		for k,v in pairs(core.registered_nodes) do
 			if v.groups["wood"] then
-				tables_chairs.register_furniture(k)
+				if not k:find("corner") and not k:find("slab") and not k:find("roof") then
+					table.insert(regs, k)
+				end
 			end
+			if extra_nodes[k] then
+				tables_chairs.register_furniture2(k, nil, false)
+			end
+		end
+		for _,k in pairs(regs) do
+			tables_chairs.register_furniture2(k, nil, true)
 		end
 	end)
 end
