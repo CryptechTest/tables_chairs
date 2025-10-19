@@ -126,11 +126,11 @@ local furnitures = {
 			{ -0.3, -0.1, -0.3, 0.3, 0, 0.2 }, -- seating
 			{ -0.2, 0.1, 0.25, 0.2, 0.4, 0.26 } -- conector 1-2
 		},
-		craft = function(recipe)
+		craft = function(recipe, recipe_stk)
 			return {
-				{ "", "group:stick" },
+				{ "", recipe_stk },
 				{ recipe, recipe },
-				{ "group:stick", "group:stick" }
+				{ recipe_stk, recipe_stk }
 			}
 		end
 	},
@@ -144,10 +144,10 @@ local furnitures = {
 			{ -0.3, -0.5, -0.3, -0.2, -0.1, -0.2 }, -- foot 4
 			{ -0.3, -0.1, -0.3, 0.3, 0, 0.3 }, -- seating
 		},
-		craft = function(recipe)
+		craft = function(recipe, recipe_stk)
 			return {
-				{ "group:stick", recipe, "group:stick" },
-				{ "group:stick", "", "group:stick" }
+				{ recipe_stk, recipe, recipe_stk },
+				{ recipe_stk, "", recipe_stk }
 			}
 		end
 	},
@@ -160,11 +160,11 @@ local furnitures = {
 			{ -0.5, -0.5, -0.3, -6/16, -0.1, -0.2 }, -- foot 4
 			{ -0.5, -0.1, -0.3, 0.5, 0, 5/16 }, -- seating
 		},
-		craft = function(recipe)
+		craft = function(recipe, recipe_stk)
 			return {
-				{ "group:stick", "" },
+				{ recipe_stk, "" },
 				{ recipe, recipe },
-				{ "group:stick", "group:stick" }
+				{ recipe_stk, recipe_stk }
 			}
 		end
 	},
@@ -177,11 +177,11 @@ local furnitures = {
 			{ 0.3, -0.5, 0.3, 0.4, 0.4, 0.4 }, -- foot 4
 			{ -0.5, 0.4, -0.5, 0.5, 0.5, 0.5 } -- table top
 		},
-		craft = function(recipe)
+		craft = function(recipe, recipe_stk)
 			return {
 				{ recipe, recipe, recipe },
-				{ "group:stick", "", "group:stick" },
-				{ "group:stick", "", "group:stick" }
+				{ recipe_stk, "", recipe_stk },
+				{ recipe_stk, "", recipe_stk }
 			}
 		end
 	},
@@ -194,10 +194,10 @@ local furnitures = {
 			{ 0.3, -0.5, 0.3, 0.4, 0.1, 0.4 }, -- foot 4
 			{ -0.5, 0.1, -0.5, 0.5, 0.2, 0.5 } -- table top
 		},
-		craft = function(recipe)
+		craft = function(recipe, recipe_stk)
 			return {
 				{ recipe, recipe, recipe },
-				{ "group:stick", "", "group:stick" }
+				{ recipe_stk, "", recipe_stk }
 			}
 		end
 	},
@@ -208,7 +208,7 @@ local furnitures = {
 			{ -0.4, -0.5, -0.5, -0.3, -0.1, 0.5 }, -- foot 1
 			{ 0.3, -0.5, -0.5, 0.4, -0.1, 0.5 }, -- foot 2
 		},
-		craft = function(recipe)
+		craft = function(recipe, recipe_stk)
 			local bench_name = "tables_chairs:" .. recipe:sub(recipe:find(":")+1) .. "_bench"
 			return {
 				{ bench_name, bench_name }
@@ -224,10 +224,10 @@ local furnitures = {
 			{ -0.4, -0.5, 0, -0.3, -0.1, 0.5 }, -- foot 1
 			{ 0.3, -0.5, 0, 0.4, -0.1, 0.5 } -- foot 2
 		},
-		craft = function(recipe)
+		craft = function(recipe, recipe_stk)
 			return {
 				{ recipe, recipe },
-				{ "group:stick", "group:stick" }
+				{ recipe_stk, recipe_stk }
 			}
 		end
 	}
@@ -309,10 +309,17 @@ function tables_chairs.register_furniture2(recipe, tiles, is_wood)
 			on_punch = def.on_punch
 		})
 
-		core.register_craft({
-			output = node_name,
-			recipe = def.craft(recipe)
-		})
+		if is_wood then
+			core.register_craft({
+				output = node_name,
+				recipe = def.craft(recipe, "group:stick")
+			})
+		else
+			core.register_craft({
+				output = node_name,
+				recipe = def.craft(recipe, "basic_materials:aluminum_bar")
+			})
+		end
 	end
 end
 
