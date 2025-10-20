@@ -9,6 +9,9 @@ local mod_mcl_player = core.get_modpath("mcl_player")
 local mod_player_api = core.get_modpath("player_api")
 local S = core.get_translator("tables_chairs")
 
+local uses_vacuum = core.get_modpath("vacuum") 
+local uses_atmos = core.get_modpath("ctg_airs")
+
 -- Get texture by node name
 local T = function (node_name)
 	local def = core.registered_nodes[node_name]
@@ -38,8 +41,15 @@ if mod_player_api or mod_mcl_player then
 	-- Thomas S. modified it, so that it can be used in this mod
 	if tables_chairs.enable_sitting then
 		tables_chairs.sit = function(pos, node, player)
-			if core.get_modpath("ctg_airs") then
+			if uses_atmos then
 				if not ctg_airs.is_atmos_node(vector.add(pos,vector_y_plus_1)) then
+					core.chat_send_player(player:get_player_name(), S("You tried to sit but hit your head."))
+					return
+				end
+			elseif uses_vacuum then
+				local n_name = core.get_node(vector.add(pos,vector_y_plus_1)).name
+				local is_vac = minetest.get_item_group(n_name, "vacuum") >= 1
+				if n_name ~= "air" and not is_vac then
 					core.chat_send_player(player:get_player_name(), S("You tried to sit but hit your head."))
 					return
 				end
@@ -236,39 +246,63 @@ local furnitures = {
 local ignore_groups = {
 	["wood"] = true,
 	["stone"] = true,
-	["tree"] = true
+	["tree"] = true,
+	["plant"] = true
 }
 
+local stick_iron = nil
+local stick_alum = nil
+local stick_carb = nil
+local stick_steel = nil
+local stick_plast = nil
+local stick_coppr = nil
+local stick_gold = nil
+if core.get_modpath("basic_materials") then
+	stick_iron = "basic_materials:steel_bar"
+	stick_alum = "basic_materials:aluminum_bar"
+	stick_carb = "basic_materials:carbon_steel_bar"
+	stick_steel = "basic_materials:stainless_steel_bar"
+	stick_plast = "basic_materials:plastic_strip"
+	stick_coppr = "basic_materials:copper_strip"
+	stick_gold = "basic_materials:gold_strip"
+end
+
+-- list of extra nodes to handle
 local extra_nodes = {}
-if core.get_modpath("ctg_world") then
-	extra_nodes["default:goldblock"] = false
-	extra_nodes["default:copperblock"] = false
-end
-if core.get_modpath("technic") then
-	extra_nodes["technic:stainless_steel_block"] = false
-end
-if core.get_modpath("scifi_nodes") then
-	extra_nodes["scifi_nodes:white"] = false
-	extra_nodes["scifi_nodes:white2"] = false
-	extra_nodes["scifi_nodes:whitetile"] = false
-	extra_nodes["scifi_nodes:blacktile"] = false
-	extra_nodes["scifi_nodes:bluetile"] = false
-end
-if core.get_modpath("ctg_world") then
-	extra_nodes["ctg_world:aluminum_block"] = false
-	extra_nodes["ctg_world:nickel_block"] = false
-	extra_nodes["ctg_world:titanium_block"] = false
+if core.get_modpath("default") then
+	extra_nodes["default:goldblock"] = {wood = false, stick = stick_gold}
+	extra_nodes["default:copperblock"] = {wood = false, stick = stick_coppr}
+	extra_nodes["default:copperblock"] = {wood = false, stick = stick_coppr}
+	extra_nodes["default:steelblock"] = {wood = false, stick = stick_iron}
 end
 if core.get_modpath("basic_materials") then
-	extra_nodes["basic_materials:brass_block"] = false
+	extra_nodes["basic_materials:brass_block"] = {wood = false, stick = stick_coppr}
+end
+if core.get_modpath("technic") then
+	extra_nodes["technic:stainless_steel_block"] = {wood = false, stick = stick_steel}
+end
+if core.get_modpath("scifi_nodes") then
+	extra_nodes["scifi_nodes:white"] = {wood = false, stick = stick_plast}
+	extra_nodes["scifi_nodes:white2"] = {wood = false, stick = stick_plast}
+	extra_nodes["scifi_nodes:whitetile"] = {wood = false, stick = stick_plast}
+	extra_nodes["scifi_nodes:blacktile"] = {wood = false, stick = stick_plast}
+	extra_nodes["scifi_nodes:bluetile"] = {wood = false, stick = stick_plast}
+end
+if core.get_modpath("ctg_world") then
+	extra_nodes["ctg_world:aluminum_block"] = {wood = false, stick = stick_alum}
+	extra_nodes["ctg_world:nickel_block"] = {wood = false, stick = stick_alum}
+	extra_nodes["ctg_world:titanium_block"] = {wood = false, stick = stick_steel}
 end
 if core.get_modpath("moreblocks") then
-	extra_nodes["moreblocks:copperpatina"] = false
+	extra_nodes["moreblocks:copperpatina"] = {wood = false, stick = stick_coppr}
+end
+if core.get_modpath("technic") then
+	extra_nodes["technic:carbon_steel_block"] = {wood = false, stick = stick_carb}
 end
 if core.get_modpath("x_farming") then
-	extra_nodes["x_farming:kiwi_wood"] = true
-	extra_nodes["x_farming:jungle_wood"] = true
-	extra_nodes["x_farming:pine_nut_wood"] = true
+	extra_nodes["x_farming:kiwi_wood"] = {wood = true}
+	extra_nodes["x_farming:jungle_wood"] = {wood = true}
+	extra_nodes["x_farming:pine_nut_wood"] = {wood = true}
 end
 
 function tables_chairs.register_legacy_alias(recipe)
@@ -279,7 +313,7 @@ function tables_chairs.register_legacy_alias(recipe)
 	end
 end
 
-function tables_chairs.register_furniture2(recipe, tiles, is_wood)
+function tables_chairs.register_furniture_adv(recipe, tiles, is_wood, recipe_bar)
 	if not tiles then
 		tiles = T(recipe)
 	end
@@ -312,6 +346,9 @@ function tables_chairs.register_furniture2(recipe, tiles, is_wood)
 		if is_wood then
 			groups2['wood'] = 1
 		end
+		if uses_vacuum then
+			groups2['leaky'] = 1
+		end
 		
 		core.register_node(":" .. node_name, {
 			description = S(def.description) .. S(" of ") .. core.registered_nodes[recipe].description,
@@ -320,6 +357,7 @@ function tables_chairs.register_furniture2(recipe, tiles, is_wood)
 			paramtype2 = "facedir",
 			sunlight_propagates = true,
 			tiles = { tiles },
+			use_texture_alpha = "clip",
 			groups = groups2,
 			node_box = {
 				type = "fixed",
@@ -329,23 +367,17 @@ function tables_chairs.register_furniture2(recipe, tiles, is_wood)
 			on_punch = def.on_punch
 		})
 
-		if is_wood then
-			core.register_craft({
-				output = node_name,
-				recipe = def.craft(recipe, "group:stick")
-			})
-		else
-			core.register_craft({
-				output = node_name,
-				recipe = def.craft(recipe, "basic_materials:aluminum_bar")
-			})
-		end
+		local stick = recipe_bar and recipe_bar or "group:stick";
+		core.register_craft({
+			output = node_name,
+			recipe = def.craft(recipe, stick)
+		})
 	end
 end
 
 
 function tables_chairs.register_furniture(recipe, tiles)
-	tables_chairs.register_furniture2(recipe, tiles, true)
+	tables_chairs.register_furniture_adv(recipe, tiles, true, nil)
 end
 
 if (core.get_modpath("default")) then
@@ -413,11 +445,11 @@ else
 					table.insert(regs, k)
 				end
 			elseif extra_nodes[k] ~= nil then
-				tables_chairs.register_furniture2(k, nil, extra_nodes[k])
+				tables_chairs.register_furniture_adv(k, nil, extra_nodes[k].wood, extra_nodes[k].stick)
 			end
 		end
 		for _,k in pairs(regs) do
-			tables_chairs.register_furniture2(k, nil, true)
+			tables_chairs.register_furniture_adv(k, nil, true)
 		end
 	end)
 end
